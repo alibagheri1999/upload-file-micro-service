@@ -8,9 +8,11 @@ import {FileInterceptor} from "@nestjs/platform-express";
 import {editFileName, imageFileFilter} from "./utilities/fileFilter";
 import {UploadFileDTO} from "./dto/uploadFile.dto";
 import {Response} from 'express'
+import * as fs from "fs";
+import {SetPolicyDTO} from "./dto/setPolicy.dto";
 
 @ApiTags("Files")
-@Controller("files")
+@Controller("api/v1/files")
 export class UserController {
     constructor(
         private readonly userService: UserService,
@@ -38,17 +40,56 @@ export class UserController {
         @Param('roomName') roomName: string,
         @Param('objectKey') objectKey: string,
         @Res() res: Response,
-    ): Promise<void> {
+    ): Promise<any> {
         const filePath = `files/${objectKey}`;
-        await this.userService.downloadFile(bucketName, roomName, objectKey, filePath);
+        const file: any = await this.userService.downloadFile(bucketName, roomName, objectKey, filePath);
+        res.setHeader('id', `${file.id}`);
+        res.setHeader('name', `${file.name}`);
+        res.setHeader('userAccessType', `${file.userAccessType}`);
+        res.setHeader('locationAccessType', `${file.locationAccessType}`);
+        res.setHeader('meetingId', `${file.meetingId}`);
+        res.setHeader('companyId', `${file.companyId}`);
+        res.setHeader('status', `${file.status}`);
+        fs.createReadStream(filePath).pipe(res);
+        this.userService.deleteActualFile(filePath)
+    }
 
-        return res.download(filePath, (err) => {
-            if (err) {
-                console.error('Error downloading file:', err);
-            }
+    @Get('download/:fileId')
+    async downloadFileWithId(
+        @Param('fileId') fileId: string,
+        @Res() res: Response,
+    ): Promise<any> {
+        const file: any = await this.userService.downloadFileWithId(fileId);
+        res.setHeader('id', `${file.id}`);
+        res.setHeader('name', `${file.name}`);
+        res.setHeader('userAccessType', `${file.userAccessType}`);
+        res.setHeader('locationAccessType', `${file.locationAccessType}`);
+        res.setHeader('meetingId', `${file.meetingId}`);
+        res.setHeader('companyId', `${file.companyId}`);
+        res.setHeader('status', `${file.status}`);
+        fs.createReadStream(`files/${file.name}`).pipe(res);
+        this.userService.deleteActualFile(`files/${file.name}`)
+    }
 
-            this.userService.deleteActualFile(filePath) // Delete the file after download
-        });
+    @Get('file/info/:fileId')
+    async getFilePoliciesById(
+        @Param('fileId') fileId: string,
+    ) {
+        return  await this.userService.getFilePolicies(fileId);
+    }
+
+    @Get('file/info/:objectKey')
+    async getFilePoliciesByObjectKey(
+        @Param('objectKey') objectKey: string,
+    ) {
+        return  await this.userService.getFilePoliciesByObjectKey(objectKey);
+    }
+
+    @Post('company/policy/:objectKey')
+    async createNewPolicyForRoom(
+        @Body() body: SetPolicyDTO
+    ) {
+        return await this.userService.createNewPolicyForRoom(body);
     }
 }
 

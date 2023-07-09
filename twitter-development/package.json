@@ -56,6 +56,7 @@
     "kavenegar": "^1.1.4",
     "minio": "^7.0.33",
     "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.5.0",
     "nestjs-joi": "^1.7.0",
     "nodemailer": "^6.7.2",
     "pg": "^8.7.3",

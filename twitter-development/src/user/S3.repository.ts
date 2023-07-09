@@ -1,11 +1,11 @@
 import {HttpException, HttpStatus, Inject, Injectable, Scope,} from "@nestjs/common";
-import {IUserRepository} from "./types/Repository.interface";
+import {IS3Repository} from "./types/S3.repository";
 import * as AWS from "aws-sdk";
 import * as fs from "fs";
 import {WriteStream} from "fs";
 
 @Injectable({scope: Scope.REQUEST})
-export class UserRepo implements IUserRepository {
+export class S3Repository implements IS3Repository {
 
     constructor(@Inject('S3') private readonly S3: AWS.S3) {
     }
@@ -94,14 +94,12 @@ export class UserRepo implements IUserRepository {
 
     async push(bucketName: string, objectKey: string, fileContent: Buffer): Promise<string | HttpException> {
         try {
-
             const params = {
                 Bucket: bucketName,
                 Key: objectKey,
                 Body: fileContent,
             };
             await this.S3.putObject(params).promise();
-            console.log(`Object ${objectKey} uploaded successfully to ${bucketName}.`);
             return 'uploaded'
         } catch (e) {
             return JSON.stringify(e)
@@ -135,7 +133,6 @@ export class UserRepo implements IUserRepository {
                 Bucket: bucketName,
             };
             await this.S3.createBucket(params).promise();
-            console.log(`Bucket ${bucketName} created successfully.`);
         } catch (e) {
             throw new HttpException(
                 {
@@ -154,9 +151,7 @@ export class UserRepo implements IUserRepository {
         };
         try {
             await this.S3.putBucketPolicy(params).promise();
-            console.log(`Bucket policy set successfully for ${bucketName}.`);
         } catch (error) {
-            console.error(`Error setting bucket policy: ${error.message}`);
             throw new HttpException(
                 {
                     status: HttpStatus.BAD_REQUEST,
@@ -176,7 +171,6 @@ export class UserRepo implements IUserRepository {
             const response = await this.S3.listObjectsV2(params).promise();
             const objects = response.Contents;
             let totalSize = 0;
-
             objects.forEach((object) => {
                 totalSize += object.Size || 0;
             });

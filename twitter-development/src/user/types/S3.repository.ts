@@ -1,6 +1,6 @@
 import {HttpException} from "@nestjs/common";
 
-export interface IUserRepository {
+export interface IS3Repository {
     downloadFile(bucketName: string, roomName: string, objectKey: string, filePath: string): Promise<void | HttpException>
 
     push(bucketName: string, objectKey: string, fileContent: Buffer): Promise<string | HttpException>
