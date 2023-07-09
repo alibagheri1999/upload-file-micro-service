@@ -117,13 +117,6 @@ export class S3Repository implements IS3Repository {
             if (error.statusCode === 404) {
                 return false;
             }
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: error,
-                },
-                HttpStatus.BAD_REQUEST
-            );
         }
     }
 
@@ -178,13 +171,7 @@ export class S3Repository implements IS3Repository {
             return totalSize;
         } catch (error) {
             console.error(`Error getting bucket size: ${error.message}`);
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: error,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+           return error.message.toString()
         }
     }
 }

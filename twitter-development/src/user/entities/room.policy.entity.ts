@@ -14,7 +14,7 @@ class RoomPolicy extends BaseEntity {
     public companyId: number;
 
     @Column()
-    public validSize: number;
+    public validSize: string;
 }
 
 export default RoomPolicy;

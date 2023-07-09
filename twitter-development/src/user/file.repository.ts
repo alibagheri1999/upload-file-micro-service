@@ -21,26 +21,38 @@ export class FileRepository implements IFileRepository {
     async getPolicyByCompanyId(companyId: number): Promise<number | string> {
         try {
             const result = await this.RoomPolicyRepository.findOne({companyId})
-            return result.validSize
+            return parseInt(result.validSize)
         } catch (e) {
             return e.message.toString()
         }
     }
 
-    async createNewFile(peyload: CreateNewFileType): Promise<string | HttpException> {
+    async createNewFile(peyload: CreateNewFileType): Promise<string> {
         try {
+            const lastFile: any = await this.getFileByName(peyload.companyId, peyload.meetingId, peyload.name)
+            if (lastFile) {
+                await this.FileRepository.update({id: lastFile.id}, peyload)
+                return lastFile.id
+            }
             const result = await this.FileRepository.insert(peyload)
             return result?.identifiers[0]?.id?.toString()
         } catch (e) {
-            return e.message.toString()
+            return "Error : can not create table, something went wrong"
         }
     }
 
     async createNewPolicyForCompany(peyload: CreateNewCompanyPolicyType): Promise<string | HttpException> {
-        return new Promise((resolve, reject) => {
-            this.RoomPolicyRepository.insert(peyload)
-                .then()
-                .catch((e) => reject(e))
+        return new Promise(async (resolve, reject) => {
+            const data: any = await this.RoomPolicyRepository.findOne({companyId: peyload.companyId})
+            if (data) {
+                this.RoomPolicyRepository.update({id: data.id}, peyload)
+                    .then()
+                    .catch((e) => reject(e))
+            } else {
+                this.RoomPolicyRepository.insert(peyload)
+                    .then()
+                    .catch((e) => reject(e))
+            }
         })
     }
 
@@ -52,9 +64,13 @@ export class FileRepository implements IFileRepository {
         }
     }
 
-    async getFileByName(name: string): Promise<File | string> {
+    async getFileByName(companyId: number, meetingId: number, name: string): Promise<File | string> {
         try {
-            return await this.FileRepository.findOne({name})
+            return (await this.FileRepository.find({
+                where: {
+                    name, companyId, meetingId
+                }
+            }))[0]
         } catch (e) {
             return e.message.toString()
         }

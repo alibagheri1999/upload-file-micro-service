@@ -52,7 +52,7 @@ export class UserService {
                     console.error(err);
                 }
             });
-            const fileId = await this.fileRepo.createNewFile({
+            const fileId: string = await this.fileRepo.createNewFile({
                 meetingId: parseInt(roomName),
                 companyId: parseInt(companyId),
                 userAccessType: JSON.stringify(policy.userAccessType),
@@ -60,12 +60,15 @@ export class UserService {
                 name: file.originalname,
                 status: UploadStatusEnum.DONE
             })
+            if (fileId.startsWith('Error')) {
+                throw fileId
+            }
             return {
                 msg: "Uploaded", file: {
                     id: fileId,
                     name: file.originalname,
                     policy,
-                    bucketSize,
+                    bucketSize: bucketSize + file.size,
                     status: UploadStatusEnum.DONE,
                     meetingId: parseInt(roomName)
                 }
@@ -89,14 +92,11 @@ export class UserService {
         }
     }
 
-    deleteActualFile(filePath: string) {
-        fs.unlinkSync(filePath);
-    }
 
     async downloadFile(bucketName: string, roomName: string, objectKey: string, filePath: string) {
         try {
             await this.userRepo.downloadFile(`company-id-${bucketName}`, roomName, objectKey, filePath)
-            return await this.fileRepo.getFileByName(objectKey)
+            return await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey)
         } catch (e) {
             throw new HttpException(
                 {
@@ -139,9 +139,9 @@ export class UserService {
         }
     }
 
-    async getFilePoliciesByObjectKey(objectKey: string) {
+    async getFilePoliciesByObjectKey(bucketName: string, roomName: string, objectKey: string) {
         try {
-            return await this.fileRepo.getFileByName(objectKey)
+            return await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey)
         } catch (e) {
             throw new HttpException(
                 {
@@ -156,12 +156,18 @@ export class UserService {
     async createNewPolicyForRoom(body: SetPolicyDTO) {
         try {
             const {companyId, validSize} = body
+            const bucketName: string = `company-id-${companyId}`;
             this.fileRepo.createNewPolicyForCompany({
                 companyId: parseInt(companyId),
-                validSize: parseInt(validSize)
+                validSize: validSize
             })
                 .then()
                 .catch()
+            const bucketExists = await this.userRepo.getBucket(bucketName);
+            if (!bucketExists) {
+                await this.userRepo.createBucket(bucketName);
+                await this.userRepo.setBucketPolicy(bucketName);
+            }
             return body
         } catch (e) {
             throw new HttpException(

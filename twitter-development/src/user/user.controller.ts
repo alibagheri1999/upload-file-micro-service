@@ -43,15 +43,14 @@ export class UserController {
     ): Promise<any> {
         const filePath = `files/${objectKey}`;
         const file: any = await this.userService.downloadFile(bucketName, roomName, objectKey, filePath);
+        setTimeout(() => fs.unlinkSync(`filePath`), 5000)
         res.setHeader('id', `${file.id}`);
-        res.setHeader('name', `${file.name}`);
         res.setHeader('userAccessType', `${file.userAccessType}`);
         res.setHeader('locationAccessType', `${file.locationAccessType}`);
         res.setHeader('meetingId', `${file.meetingId}`);
         res.setHeader('companyId', `${file.companyId}`);
         res.setHeader('status', `${file.status}`);
         fs.createReadStream(filePath).pipe(res);
-        this.userService.deleteActualFile(filePath)
     }
 
     @Get('download/:fileId')
@@ -60,29 +59,30 @@ export class UserController {
         @Res() res: Response,
     ): Promise<any> {
         const file: any = await this.userService.downloadFileWithId(fileId);
+        setTimeout(() => fs.unlinkSync(`files/${file.name}`), 5000)
         res.setHeader('id', `${file.id}`);
-        res.setHeader('name', `${file.name}`);
         res.setHeader('userAccessType', `${file.userAccessType}`);
         res.setHeader('locationAccessType', `${file.locationAccessType}`);
         res.setHeader('meetingId', `${file.meetingId}`);
         res.setHeader('companyId', `${file.companyId}`);
         res.setHeader('status', `${file.status}`);
         fs.createReadStream(`files/${file.name}`).pipe(res);
-        this.userService.deleteActualFile(`files/${file.name}`)
     }
 
-    @Get('file/info/:fileId')
+    @Get('file/infoById/:fileId')
     async getFilePoliciesById(
         @Param('fileId') fileId: string,
     ) {
-        return  await this.userService.getFilePolicies(fileId);
+        return await this.userService.getFilePolicies(fileId);
     }
 
-    @Get('file/info/:objectKey')
+    @Get('file/info/:bucketName/:roomName/:objectKey')
     async getFilePoliciesByObjectKey(
+        @Param('bucketName') bucketName: string,
+        @Param('roomName') roomName: string,
         @Param('objectKey') objectKey: string,
     ) {
-        return  await this.userService.getFilePoliciesByObjectKey(objectKey);
+        return await this.userService.getFilePoliciesByObjectKey(bucketName, roomName, objectKey);
     }
 
     @Post('company/policy/:objectKey')
