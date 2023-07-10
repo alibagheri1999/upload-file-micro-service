@@ -10,7 +10,7 @@ export class AppClusterService {
         const cluster = _cluster as unknown as _cluster.Cluster;
         if(cluster.isMaster){
             console.log(`Master server started on ${process.pid}`);
-            for (let i = 0; i < 1; i++) {
+            for (let i = 0; i < numCPUs; i++) {
                 cluster.fork();
             }
             cluster.on('exit', (worker, code, signal) => {

@@ -1,4 +1,5 @@
 import {UploadStatusEnum} from '../enum/uploadStatus.enum'
+import {FileTypeEnum} from "../enum/fileType.enum";
 
 export interface CreateNewFileType {
     locationAccessType: string;
@@ -6,5 +7,6 @@ export interface CreateNewFileType {
     meetingId: number;
     companyId: number;
     userAccessType: string;
-    status: UploadStatusEnum
+    status: UploadStatusEnum;
+    type: FileTypeEnum;
 }

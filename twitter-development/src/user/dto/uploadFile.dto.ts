@@ -1,6 +1,6 @@
 import {IsNotEmpty, IsString} from 'class-validator'
 import {ApiProperty} from '@nestjs/swagger';
-import {PolicyType} from "../types/policy.type";
+import {FileTypeEnum} from "../enum/fileType.enum";
 
 export class UploadFileDTO {
     @ApiProperty({
@@ -25,6 +25,14 @@ export class UploadFileDTO {
     })
     @IsNotEmpty()
     policy: any
+
+    @ApiProperty({
+        type: 'string',
+        example: "whiteboard",
+    })
+    @IsString()
+    @IsNotEmpty()
+    type: FileTypeEnum
 
     @ApiProperty({
         type: 'string',

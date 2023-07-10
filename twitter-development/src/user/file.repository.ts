@@ -6,6 +6,7 @@ import File from './entities/file.entity'
 import RoomPolicy from './entities/room.policy.entity'
 import {CreateNewFileType} from "./types/create.file";
 import {CreateNewCompanyPolicyType} from "./types/create.company.policy";
+import {FileTypeEnum} from './enum/fileType.enum'
 
 @Injectable({scope: Scope.REQUEST})
 export class FileRepository implements IFileRepository {
@@ -29,7 +30,7 @@ export class FileRepository implements IFileRepository {
 
     async createNewFile(peyload: CreateNewFileType): Promise<string> {
         try {
-            const lastFile: any = await this.getFileByName(peyload.companyId, peyload.meetingId, peyload.name)
+            const lastFile: any = await this.getFileByName(peyload.companyId, peyload.meetingId, peyload.name, peyload.type)
             if (lastFile) {
                 await this.FileRepository.update({id: lastFile.id}, peyload)
                 return lastFile.id
@@ -64,11 +65,11 @@ export class FileRepository implements IFileRepository {
         }
     }
 
-    async getFileByName(companyId: number, meetingId: number, name: string): Promise<File | string> {
+    async getFileByName(companyId: number, meetingId: number, name: string, type: FileTypeEnum): Promise<File | string> {
         try {
             return (await this.FileRepository.find({
                 where: {
-                    name, companyId, meetingId
+                    name, companyId, meetingId, type
                 }
             }))[0]
         } catch (e) {

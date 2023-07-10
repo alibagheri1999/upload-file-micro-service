@@ -1,15 +1,16 @@
 import {Body, Controller, Get, Param, Post, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
 import {UserService} from "./user.service";
+// for auth
 // import {AuthGuard} from "./guards/auth.guard";
+// import {GetUser} from "./decorators/user.decorator";
 import {diskStorage} from 'multer';
 import {ApiConsumes, ApiTags} from "@nestjs/swagger";
-// import {GetUser} from "./decorators/user.decorator";
 import {FileInterceptor} from "@nestjs/platform-express";
 import {editFileName, imageFileFilter} from "./utilities/fileFilter";
 import {UploadFileDTO} from "./dto/uploadFile.dto";
 import {Response} from 'express'
-import * as fs from "fs";
 import {SetPolicyDTO} from "./dto/setPolicy.dto";
+import {FileTypeEnum} from './enum/fileType.enum'
 
 @ApiTags("Files")
 @Controller("api/v1/files")
@@ -34,39 +35,35 @@ export class UserController {
         return await this.userService.uploadFile(file, body)
     }
 
-    @Get('download/:bucketName/:roomName/:objectKey')
+    @Get('download/:bucketName/:roomName/:type/:objectKey')
     async downloadFile(
         @Param('bucketName') bucketName: string,
         @Param('roomName') roomName: string,
+        @Param('type') type: FileTypeEnum,
         @Param('objectKey') objectKey: string,
         @Res() res: Response,
-    ): Promise<any> {
-        const filePath = `files/${objectKey}`;
-        const file: any = await this.userService.downloadFile(bucketName, roomName, objectKey, filePath);
-        setTimeout(() => fs.unlinkSync(`filePath`), 5000)
-        res.setHeader('id', `${file.id}`);
-        res.setHeader('userAccessType', `${file.userAccessType}`);
-        res.setHeader('locationAccessType', `${file.locationAccessType}`);
-        res.setHeader('meetingId', `${file.meetingId}`);
-        res.setHeader('companyId', `${file.companyId}`);
-        res.setHeader('status', `${file.status}`);
-        fs.createReadStream(filePath).pipe(res);
+    ) {
+        const file: any = await this.userService.downloadFile(bucketName, roomName, objectKey, type);
+        if (!file) {
+            throw new Error('File is broken');
+        }
+        res.json(file);
+        // if we want to use stream we need to read from fs
+        // fs.createReadStream(filePath).pipe(res);
     }
 
     @Get('download/:fileId')
     async downloadFileWithId(
         @Param('fileId') fileId: string,
         @Res() res: Response,
-    ): Promise<any> {
+    ) {
         const file: any = await this.userService.downloadFileWithId(fileId);
-        setTimeout(() => fs.unlinkSync(`files/${file.name}`), 5000)
-        res.setHeader('id', `${file.id}`);
-        res.setHeader('userAccessType', `${file.userAccessType}`);
-        res.setHeader('locationAccessType', `${file.locationAccessType}`);
-        res.setHeader('meetingId', `${file.meetingId}`);
-        res.setHeader('companyId', `${file.companyId}`);
-        res.setHeader('status', `${file.status}`);
-        fs.createReadStream(`files/${file.name}`).pipe(res);
+        if (!file) {
+            throw new Error('File is broken');
+        }
+        res.json(file);
+        // if we want to use stream we need to read from fs
+        // fs.createReadStream(`files/${file.name}`).pipe(res);
     }
 
     @Get('file/infoById/:fileId')
@@ -76,16 +73,21 @@ export class UserController {
         return await this.userService.getFilePolicies(fileId);
     }
 
-    @Get('file/info/:bucketName/:roomName/:objectKey')
+    @Get('file/info/:bucketName/:roomName/:type/:objectKey')
     async getFilePoliciesByObjectKey(
         @Param('bucketName') bucketName: string,
         @Param('roomName') roomName: string,
+        @Param('type') type: FileTypeEnum,
         @Param('objectKey') objectKey: string,
     ) {
-        return await this.userService.getFilePoliciesByObjectKey(bucketName, roomName, objectKey);
+        const result = await this.userService.getFilePoliciesByObjectKey(bucketName, roomName, objectKey, type)
+        if (!result) {
+            throw new Error('File is broken');
+        }
+        return result
     }
 
-    @Post('company/policy/:objectKey')
+    @Post('company/policy')
     async createNewPolicyForRoom(
         @Body() body: SetPolicyDTO
     ) {

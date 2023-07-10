@@ -1,8 +1,8 @@
 import {HttpException, HttpStatus, Inject, Injectable, Scope,} from "@nestjs/common";
 import {IS3Repository} from "./types/S3.repository";
 import * as AWS from "aws-sdk";
-import * as fs from "fs";
-import {WriteStream} from "fs";
+import {GetObjectCommand} from "@aws-sdk/client-s3";
+import {FileTypeEnum} from "./enum/fileType.enum";
 
 @Injectable({scope: Scope.REQUEST})
 export class S3Repository implements IS3Repository {
@@ -14,8 +14,8 @@ export class S3Repository implements IS3Repository {
         Bucket: string,
         Key: string,
     }): Promise<boolean | HttpException> {
-        return new Promise((resolve, reject) => {
-            this.S3.headObject(params, (err, data) => {
+        return new Promise((resolve, _) => {
+            this.S3.headObject(params, (err, _) => {
                 if (err && err.code === 'NotFound') {
                     resolve(false)
                 } else if (err) {
@@ -27,25 +27,33 @@ export class S3Repository implements IS3Repository {
         });
     }
 
-    async downloadFile(bucketName: string, roomName: string, objectKey: string, filePath: string): Promise<void | HttpException> {
-        let stream: any;
+    async downloadFile(bucketName: string, roomName: string, objectKey: string, type: FileTypeEnum): Promise<string | HttpException> {
+        let signedUrl: string;
         let params: {
             Bucket: string,
             Key: string,
         };
-        let file: WriteStream;
         try {
             params = {
                 Bucket: bucketName,
-                Key: `${roomName}/${objectKey}`,
+                Key: `${roomName}/${type}/${objectKey}`,
             };
-            file = fs.createWriteStream(filePath);
             if (await this.existKey(params)) {
-                stream = await this.S3.getObject(params)?.createReadStream()
+                const command = new GetObjectCommand({
+                    Bucket: params.Bucket,
+                    Key: params.Key,
+                });
+                signedUrl = this.S3.getSignedUrl('getObject', {
+                    ...command.input,
+                    Bucket: command.input.Bucket,
+                    Key: command.input.Key,
+                    Expires: 604800,
+                });
             } else {
                 throw 'The specified key does not exist'
 
             }
+            return signedUrl ? signedUrl : 'The specified key does not exist'
         } catch (e) {
             throw new HttpException(
                 {
@@ -55,15 +63,6 @@ export class S3Repository implements IS3Repository {
                 HttpStatus.BAD_REQUEST
             );
         }
-        return new Promise((resolve, reject) => {
-            stream.pipe(file)
-                .on('error', (err) => {
-                    reject(err);
-                })
-                .on('close', () => {
-                    resolve();
-                });
-        });
     }
 
     async setBucketPolicy(bucketName: string): Promise<void | HttpException> {
@@ -170,8 +169,7 @@ export class S3Repository implements IS3Repository {
 
             return totalSize;
         } catch (error) {
-            console.error(`Error getting bucket size: ${error.message}`);
-           return error.message.toString()
+            return error.message.toString()
         }
     }
 }

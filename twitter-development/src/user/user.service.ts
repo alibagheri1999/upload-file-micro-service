@@ -6,6 +6,7 @@ import {UploadStatusEnum} from "./enum/uploadStatus.enum";
 import {FileRepository} from "./file.repository";
 import {PolicyType} from "./types/policy.type";
 import {SetPolicyDTO} from "./dto/setPolicy.dto";
+import {FileTypeEnum} from "./enum/fileType.enum";
 
 @Injectable({scope: Scope.REQUEST})
 export class UserService {
@@ -17,7 +18,7 @@ export class UserService {
     }
 
     async uploadFile(file: any, body: UploadFileDTO) {
-        let {roomName, companyId, policy} = body
+        let {roomName, companyId, policy, type} = body
         policy = JSON.parse(policy) as PolicyType
         try {
             const bucketName: string = `company-id-${companyId}`;
@@ -39,7 +40,7 @@ export class UserService {
                 );
             }
             const buffer: Buffer = fs.readFileSync(file.path);
-            let filename: string = `${roomName}/${file.originalname}`;
+            let filename: string = `${roomName}/${type}/${file.originalname}`;
             const bucketExists = await this.userRepo.getBucket(bucketName);
             if (!bucketExists) {
                 await this.userRepo.createBucket(bucketName);
@@ -58,7 +59,8 @@ export class UserService {
                 userAccessType: JSON.stringify(policy.userAccessType),
                 locationAccessType: JSON.stringify(policy.locationAccessType),
                 name: file.originalname,
-                status: UploadStatusEnum.DONE
+                status: UploadStatusEnum.DONE,
+                type
             })
             if (fileId.startsWith('Error')) {
                 throw fileId
@@ -68,9 +70,10 @@ export class UserService {
                     id: fileId,
                     name: file.originalname,
                     policy,
-                    bucketSize: bucketSize + file.size,
+                    bucketSize: typeof bucketSize === 'number' ? bucketSize + file.size : file.size,
                     status: UploadStatusEnum.DONE,
-                    meetingId: parseInt(roomName)
+                    meetingId: parseInt(roomName),
+                    type
                 }
             };
         } catch (e) {
@@ -80,7 +83,8 @@ export class UserService {
                 userAccessType: JSON.stringify(policy.userAccessType),
                 locationAccessType: JSON.stringify(policy.locationAccessType),
                 name: file.originalname,
-                status: UploadStatusEnum.FAIL
+                status: UploadStatusEnum.FAIL,
+                type
             })
             throw new HttpException(
                 {
@@ -93,10 +97,11 @@ export class UserService {
     }
 
 
-    async downloadFile(bucketName: string, roomName: string, objectKey: string, filePath: string) {
+    async downloadFile(bucketName: string, roomName: string, objectKey: string, type: FileTypeEnum) {
         try {
-            await this.userRepo.downloadFile(`company-id-${bucketName}`, roomName, objectKey, filePath)
-            return await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey)
+            const fileInfo = await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey, type)
+            fileInfo['url'] = await this.userRepo.downloadFile(`company-id-${bucketName}`, roomName, objectKey, type)
+            return fileInfo
         } catch (e) {
             throw new HttpException(
                 {
@@ -110,10 +115,9 @@ export class UserService {
 
     async downloadFileWithId(fileId: string) {
         try {
-            const data: any = await this.fileRepo.getFileById(fileId)
-            const filePath = `files/${data.name}`;
-            await this.userRepo.downloadFile(`company-id-${data.companyId}`, data.meetingId, data.name, filePath)
-            return data
+            const fileInfo: any = await this.fileRepo.getFileById(fileId)
+            fileInfo['url'] = await this.userRepo.downloadFile(`company-id-${fileInfo.companyId}`, fileInfo.meetingId, fileInfo.name, fileInfo.type)
+            return fileInfo
         } catch (e) {
             throw new HttpException(
                 {
@@ -139,9 +143,9 @@ export class UserService {
         }
     }
 
-    async getFilePoliciesByObjectKey(bucketName: string, roomName: string, objectKey: string) {
+    async getFilePoliciesByObjectKey(bucketName: string, roomName: string, objectKey: string, type: FileTypeEnum) {
         try {
-            return await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey)
+            return await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey, type)
         } catch (e) {
             throw new HttpException(
                 {
