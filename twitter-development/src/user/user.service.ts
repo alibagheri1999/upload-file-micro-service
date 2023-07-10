@@ -25,7 +25,7 @@ export class UserService {
             let bucketSizeFromPolicy = await this.fileRepo.getPolicyByCompanyId(parseInt(companyId))
             const bucketSize = await this.userRepo.getBucketSize(bucketName)
             bucketSizeFromPolicy = typeof bucketSizeFromPolicy === 'number' ? bucketSizeFromPolicy : Infinity
-            if (bucketSizeFromPolicy > bucketSize + file.size) {
+            if (bucketSizeFromPolicy < bucketSize + file.size) {
                 fs.unlink(file.path, (err) => {
                     if (err) {
                         console.error(err);
