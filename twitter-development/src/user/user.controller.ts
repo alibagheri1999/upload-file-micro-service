@@ -1,4 +1,15 @@
-import {Body, Controller, Get, Param, Post, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Get,
+    HttpException,
+    HttpStatus,
+    Param,
+    Post,
+    Res,
+    UploadedFile,
+    UseInterceptors
+} from "@nestjs/common";
 import {UserService} from "./user.service";
 // for auth
 // import {AuthGuard} from "./guards/auth.guard";
@@ -45,11 +56,9 @@ export class UserController {
     ) {
         const file: any = await this.userService.downloadFile(bucketName, roomName, objectKey, type);
         if (!file) {
-            throw new Error('File is broken');
+            throw new HttpException('File is broken', HttpStatus.BAD_REQUEST);
         }
         res.json(file);
-        // if we want to use stream we need to read from fs
-        // fs.createReadStream(filePath).pipe(res);
     }
 
     @Get('download/:fileId')
@@ -59,18 +68,20 @@ export class UserController {
     ) {
         const file: any = await this.userService.downloadFileWithId(fileId);
         if (!file) {
-            throw new Error('File is broken');
+            throw new HttpException('File is broken', HttpStatus.BAD_REQUEST);
         }
         res.json(file);
-        // if we want to use stream we need to read from fs
-        // fs.createReadStream(`files/${file.name}`).pipe(res);
     }
 
     @Get('file/infoById/:fileId')
     async getFilePoliciesById(
         @Param('fileId') fileId: string,
     ) {
-        return await this.userService.getFilePolicies(fileId);
+        const result = await this.userService.getFilePolicies(fileId);
+        if (!result) {
+            throw new HttpException('nothing found', HttpStatus.NOT_FOUND);
+        }
+        return result
     }
 
     @Get('file/info/:bucketName/:roomName/:type/:objectKey')
@@ -82,7 +93,7 @@ export class UserController {
     ) {
         const result = await this.userService.getFilePoliciesByObjectKey(bucketName, roomName, objectKey, type)
         if (!result) {
-            throw new Error('File is broken');
+            throw new HttpException('nothing found', HttpStatus.NOT_FOUND);
         }
         return result
     }
