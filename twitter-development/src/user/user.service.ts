@@ -25,19 +25,13 @@ export class UserService {
             let bucketSizeFromPolicy = await this.fileRepo.getPolicyByCompanyId(parseInt(companyId))
             const bucketSize = await this.userRepo.getBucketSize(bucketName)
             bucketSizeFromPolicy = typeof bucketSizeFromPolicy === 'number' ? bucketSizeFromPolicy : Infinity
-            if (bucketSizeFromPolicy < bucketSize + file.size) {
+            if (bucketSizeFromPolicy > bucketSize + file.size) {
                 fs.unlink(file.path, (err) => {
                     if (err) {
                         console.error(err);
                     }
                 });
-                throw new HttpException(
-                    {
-                        status: HttpStatus.BAD_REQUEST,
-                        error: "reached MAX bucket size"
-                    },
-                    HttpStatus.BAD_REQUEST
-                );
+                throw new HttpException("reached MAX bucket size", HttpStatus.BAD_REQUEST);
             }
             const buffer: Buffer = fs.readFileSync(file.path);
             let filename: string = `${roomName}/${type}/${file.originalname}`;
@@ -86,13 +80,7 @@ export class UserService {
                 status: UploadStatusEnum.FAIL,
                 type
             })
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: typeof e === "string" ? JSON.parse(e) : e,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+            throw new HttpException(typeof e === "string" ? JSON.parse(e) : e, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -103,13 +91,7 @@ export class UserService {
             fileInfo['url'] = await this.userRepo.downloadFile(`company-id-${bucketName}`, roomName, objectKey, type)
             return fileInfo
         } catch (e) {
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: e,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+            throw new HttpException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -117,15 +99,10 @@ export class UserService {
         try {
             const fileInfo: any = await this.fileRepo.getFileById(fileId)
             fileInfo['url'] = await this.userRepo.downloadFile(`company-id-${fileInfo.companyId}`, fileInfo.meetingId, fileInfo.name, fileInfo.type)
+            console.log(111)
             return fileInfo
         } catch (e) {
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: e,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+            throw new HttpException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -133,13 +110,7 @@ export class UserService {
         try {
             return await this.fileRepo.getFileById(fileId)
         } catch (e) {
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: e,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+            throw new HttpException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -147,13 +118,7 @@ export class UserService {
         try {
             return await this.fileRepo.getFileByName(parseInt(bucketName), parseInt(roomName), objectKey, type)
         } catch (e) {
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: e,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+            throw new HttpException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -174,13 +139,7 @@ export class UserService {
             }
             return body
         } catch (e) {
-            throw new HttpException(
-                {
-                    status: HttpStatus.BAD_REQUEST,
-                    error: e,
-                },
-                HttpStatus.BAD_REQUEST
-            );
+            throw new HttpException(e, HttpStatus.BAD_REQUEST);
         }
     }
 }

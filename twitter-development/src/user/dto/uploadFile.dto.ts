@@ -20,8 +20,11 @@ export class UploadFileDTO {
     companyId: string
 
     @ApiProperty({
-        type: 'number',
-        example: 1234,
+        type: 'string',
+        example: {
+            "locationAccessType": [1, 3],
+            "userAccessType": [1, 2]
+        },
     })
     @IsNotEmpty()
     policy: any
