@@ -1,13 +1,93 @@
-# You can override the included template(s) by including variable overrides
-# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
-# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/#customizing-settings
-# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
-# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
-# Note that environment variables can be set in several places
-# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
+moein:
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://172.31.19.218:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_REGISTRY_IMAGE_DEV: gitlab.com:8083/palphone/dev/$CI_PROJECT_NAME:latest
+  DOCKER_REGISTRY_IMAGE_STAGING: gitlab.com:8083/palphone/staging/$CI_PROJECT_NAME:latest
+  DOCKER_REGISTRY_IMAGE_PROD: gitlab.com:8083/palphone/prod/$CI_PROJECT_NAME:latest
+  #DEV_IP:
+  STAGING_IP: 172.31.15.66
+  PROD_IP: 172.31.24.58
+  GIT_STRATEGY: clone
+
 stages:
-- test
-sast:
-  stage: test
-include:
-- template: Security/SAST.gitlab-ci.yml
+  - push-dev
+  - push-staging
+  - push-prod
+  - deploy-dev
+  - deploy-staging
+  - deploy-prod
+
+#Pushes
+
+push-dev:
+  stage: push-dev
+  tags:
+    - pal
+  image: gitlab.com:8083/docker:dind
+  before_script:
+    - docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $REGISTRY_URL
+  script:
+    - docker build -t $DOCKER_REGISTRY_IMAGE_DEV .
+    - docker push $DOCKER_REGISTRY_IMAGE_DEV
+  only:
+    - dev
+
+push-staging:
+  stage: push-staging
+  tags:
+    - pal
+  image: gitlab.com:8083/docker:dind
+  before_script:
+    - docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $REGISTRY_URL
+  script:
+    - docker build -t $DOCKER_REGISTRY_IMAGE_STAGING .
+    - docker push $DOCKER_REGISTRY_IMAGE_STAGING
+  only:
+    - staging
+
+push-prod:
+  stage: push-prod
+  tags:
+    - pal
+  image: gitlab.com:8083/docker:dind
+  before_script:
+    - docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $REGISTRY_URL
+  script:
+    - docker build -t $DOCKER_REGISTRY_IMAGE_PROD .
+    - docker push $DOCKER_REGISTRY_IMAGE_PROD
+  only:
+    - main
+  when: manual
+
+deploy-dev:
+  stage: deploy-dev
+  tags:
+    - pal
+  image: gitlab.com:8083/basecd:latest
+  script:
+    - ssh -o StrictHostKeyChecking=no -t root@ "docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $REGISTRY_URL && /opt/docker/deploy.sh $CI_PROJECT_NAME"
+  only:
+    - dev
+
+deploy-staging:
+  stage: deploy-staging
+  tags:
+    - pal
+  image: gitlab.com:8083/basecd:latest
+  script:
+    - ssh -o StrictHostKeyChecking=no -t root@$STAGING_IP "docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $REGISTRY_URL && /opt/docker/deploy.sh $CI_PROJECT_NAME"
+  only:
+    - staging
+
+deploy-prod:
+  stage: deploy-prod
+  tags:
+    - pal
+  image: gitlab.com:8083/basecd:latest
+  script:
+    - ssh -o StrictHostKeyChecking=no -t root@$PROD_IP "docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $REGISTRY_URL && /opt/docker/deploy.sh $CI_PROJECT_NAME"
+  only:
+    - main
+  when: manual
