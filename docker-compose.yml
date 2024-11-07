@@ -53,7 +53,7 @@ services:
       - "redis"
       - "nats"
 
-  mysql:
+  mariadb:
     image: mariadb:10.4.13
     volumes:
       - core-mariadb-storage:/var/lib/mysql

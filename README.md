@@ -1,6 +1,6 @@
 ## Description
 
-[Shooka](https://shooka.com/) File manager server.
+File manager server.
 
 ## Installation
 
